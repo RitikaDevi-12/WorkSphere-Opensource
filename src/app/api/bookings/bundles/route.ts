@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import {
   calculateRevenueAttribution,
@@ -20,7 +21,7 @@ import {
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
+    const _userId = searchParams.get("userId");
 
     // Curated day pass bundles available for instant booking
     const curatedBundles = [
@@ -102,9 +103,21 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await auth();
+    const authenticatedUserId = session?.userId;
+    if (!authenticatedUserId) {
+      return NextResponse.json(
+        {
+          error:
+            "Unauthorized: You must be logged in to create a Work-Hop bundle",
+        },
+        { status: 401 },
+      );
+    }
+    const userId = authenticatedUserId;
+
     const body = await req.json();
     const {
-      userId = "user_guest_nomad",
       date,
       title = "Custom Work-Hop Day Pass",
       tier = "NOMAD_PRO",
